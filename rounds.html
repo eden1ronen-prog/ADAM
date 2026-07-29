@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mini Rounds</title>
+<style>
+body{
+margin:0;
+overflow:hidden;
+background:#222;
+font-family:Arial;
+color:white;
+}
+canvas{
+background:#444;
+display:block;
+margin:auto;
+}
+#ui{
+position:absolute;
+left:10px;
+top:10px;
+font-size:20px;
+}
+</style>
+</head>
+<body>
+
+<div id="ui"></div>
+<canvas id="game" width="900" height="500"></canvas>
+
+<script>
+
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+let round=1;
+
+let player={
+x:100,
+y:380,
+w:35,
+h:60,
+vx:0,
+vy:0,
+speed:5,
+jump:14,
+hp:100,
+maxHp:100,
+damage:20,
+cooldown:300,
+lastShot:0,
+color:"cyan"
+};
+
+let enemy={
+x:700,
+y:380,
+w:35,
+h:60,
+vx:2,
+vy:0,
+hp:100,
+color:"red"
+};
+
+let bullets=[];
+
+const gravity=0.7;
+
+function shoot(shooter,dir){
+
+let now=Date.now();
+
+if(shooter.lastShot&&now-shooter.lastShot<player.cooldown)return;
+
+shooter.lastShot=now;
+
+bullets.push({
+x:shooter.x+shooter.w/2,
+y:shooter.y+20,
+vx:dir*10,
+owner:shooter
+});
+
+}
+
+document.onkeydown=e=>{
+
+if(e.key=="a")player.vx=-player.speed;
+if(e.key=="d")player.vx=player.speed;
+
+if(e.key=="w"){
+if(player.y>=380){
+player.vy=-player.jump;
+}
+}
+
+if(e.code=="Space"){
+shoot(player,1);
+}
+
+};
+
+document.onkeyup=e=>{
+
+if(e.key=="a"||e.key=="d"){
+player.vx=0;
+}
+
+};
+
+function update(){
+
+player.vy+=gravity;
+enemy.vy+=gravity;
+
+player.x+=player.vx;
+player.y+=player.vy;
+
+enemy.x+=enemy.vx;
+enemy.y+=enemy.vy;
+
+if(player.y>380){
+player.y=380;
+player.vy=0;
+}
+
+if(enemy.y>380){
+enemy.y=380;
+enemy.vy=0;
+}
+
+if(enemy.x<500||enemy.x>850){
+enemy.vx*=-1;
+}
+
+if(Math.random()<0.02){
+
+shoot(enemy,-1);
+
+}
+
+for(let i=bullets.length-1;i>=0;i--){
+
+let b=bullets[i];
+
+b.x+=b.vx;
+
+if(b.owner==player){
+
+if(
+b.x>enemy.x &&
+b.x<enemy.x+enemy.w &&
+b.y>enemy.y &&
+b.y<enemy.y+enemy.h
+){
+
+enemy.hp-=player.damage;
+bullets.splice(i,1);
+
+}
+
+}else{
+
+if(
+b.x>player.x &&
+b.x<player.x+player.w &&
+b.y>player.y &&
+b.y<player.y+player.h
+){
+
+player.hp-=10;
+bullets.splice(i,1);
+
+}
+
+}
+
+if(b.x<0||b.x>900){
+
+bullets.splice(i,1);
+
+}
+
+}
+
+if(enemy.hp<=0){
+
+round++;
+
+enemy.hp=100;
+
+enemy.x=700;
+
+upgrade();
+
+}
+
+if(player.hp<=0){
+
+alert("Game Over");
+
+location.reload();
+
+}
+
+document.getElementById("ui").innerHTML=
+"Round: "+round+
+"<br>HP: "+player.hp+
+"/"+player.maxHp+
+"<br>Damage: "+player.damage+
+"<br>Fire Rate: "+(1000/player.cooldown).toFixed(1);
+
+}
+
+function upgrade(){
+
+let upgrades=[
+
+()=>{
+player.damage+=5;
+alert("Upgrade: +5 Damage");
+},
+
+()=>{
+player.maxHp+=20;
+player.hp=player.maxHp;
+alert("Upgrade: +20 HP");
+},
+
+()=>{
+player.speed+=1;
+alert("Upgrade: Speed");
+},
+
+()=>{
+player.cooldown=Math.max(80,player.cooldown-40);
+alert("Upgrade: Fire Rate");
+},
+
+()=>{
+player.jump+=2;
+alert("Upgrade: Jump");
+}
+
+];
+
+upgrades[Math.floor(Math.random()*upgrades.length)]();
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,900,500);
+
+ctx.fillStyle="#666";
+ctx.fillRect(0,440,900,60);
+
+ctx.fillStyle=player.color;
+ctx.fillRect(player.x,player.y,player.w,player.h);
+
+ctx.fillStyle=enemy.color;
+ctx.fillRect(enemy.x,enemy.y,enemy.w,enemy.h);
+
+ctx.fillStyle="yellow";
+
+for(let b of bullets){
+
+ctx.beginPath();
+ctx.arc(b.x,b.y,5,0,7);
+ctx.fill();
+
+}
+
+}
+
+function loop(){
+
+update();
+draw();
+
+requestAnimationFrame(loop);
+
+}
+
+loop();
+
+</script>
+
+</body>
+</html>
